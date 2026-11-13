@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<linker>
+	<assembly fullname="Nox.CCK.Interactions" preserve="all" />
+	<assembly fullname="Nox.Interactions" preserve="all" />
+</linker>

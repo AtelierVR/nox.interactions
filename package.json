@@ -1,0 +1,7 @@
+{
+    "name": "nox.interactions",
+    "displayName": "Nox - Interactions",
+    "version": "1.0.0",
+    "description": "Platform agnostic grab contracts (SDK) and reference implementations (CCK): grabbers, grabbables, grab poses, conforming and joints.",
+    "dependencies": {}
+}
