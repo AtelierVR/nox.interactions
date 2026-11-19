@@ -4,7 +4,14 @@ using UnityEngine;
 
 namespace Nox.CCK.Interactions {
 	public static class GrabJointBinder {
-		public static ConfigurableJoint Bind(GrabberBase grabber, GrabbableBase grabbable, Vector3 worldAnchor, float breakForce, bool rigid = false) {
+		public static ConfigurableJoint Bind(GrabberBase grabber, GrabbableBase grabbable, Vector3 worldAnchor, float breakForce, bool rigid = false)
+			=> Bind((Component)grabber, grabbable, worldAnchor, breakForce, rigid);
+
+		/// <summary>
+		/// Binds the joint on the GameObject of the grabber. A plain <see cref="Component"/> too, so a hand that carries its
+		/// grabber in its own class (as AutoHand does) can hold its object with a joint.
+		/// </summary>
+		public static ConfigurableJoint Bind(Component grabber, GrabbableBase grabbable, Vector3 worldAnchor, float breakForce, bool rigid = false) {
 			if (grabber == null || grabbable == null || grabbable.Body == null)
 				return null;
 

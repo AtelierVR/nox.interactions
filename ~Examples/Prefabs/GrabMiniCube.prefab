@@ -163,34 +163,39 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   body: {fileID: 4819204861659755997}
-  grabAnchor: {fileID: 0}
-  highlightMaterial: {fileID: 2100000, guid: b96bd2d9288b60040a2574f254bcbdc2, type: 2}
-  grabPose: {fileID: 0}
   grabColliders:
   - {fileID: 4099386883394902096}
-  allowed: 63
-  mode: 0
-  poseType: 0
-  grabType: 3
-  instantGrab: 0
-  release:
-    enabled: 1
-    multiplier: 0.5
-    motion:
-      memory: 0.3
-      span: 0.1
-      grace: 0.15
-      minMove: 0.002
-      maxSpeed: 6
-  hold:
-    dynamic: 0
+  highlightMaterial: {fileID: 2100000, guid: b96bd2d9288b60040a2574f254bcbdc2, type: 2}
+  grab:
+    isGrabbable: 1
+    allowed: 63
+    type: 2
+    pose: 0
+    instant: 0
+    single: 0
+    allowSwap: 1
+    priority: 1
+    requireFree: 0
+  held:
+    ignoreWeight: 1
+    noFriction: 1
     followSpeed: 30
-    turnSpeed: 1440
-    snap: 0
-    fixedDistance: 0
-    atHoldDistance: 0
-    distance: 0
-  limits:
-    drag: 0
-    mass: 0
-  singleGrabberOnly: 1
+    minDrag: 0
+    minAngleDrag: 0
+    minMass: 0
+    massDivider: 2
+  release:
+    throwPower: 0.5
+    jointBreakForce: 3500
+  tear:
+    enabled: 1
+    distance: 0.2
+  solve:
+    maxSpeed: 15
+    maxHandOffset: 0.5
+  motion:
+    memory: 0.3
+    span: 0.1
+    grace: 0.15
+    minMove: 0.002
+    maxSpeed: 6

@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Nox.Interactions;
 using UnityEngine;
 
 namespace Nox.CCK.Interactions {
 	[Serializable]
-	public class Motion : IMotion {
+	public class Motion {
 		private struct Sample {
 			public float time;
 			public Vector3 position;

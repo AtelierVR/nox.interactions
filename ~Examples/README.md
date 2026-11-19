@@ -9,95 +9,112 @@ Assets d'exemple pour le CCK `Nox.CCK.Interactions`.
 | `Prefabs/GrabCube.prefab` | cube attrapable complet |
 | `Materials/GrabCube.mat` | matériau du cube (URP Lit, bleu) |
 | `Materials/GrabCubeHighlight.mat` | matériau de surbrillance (cyan + émission) |
-| `Prefabs/GrabMiniCube.prefab` | mini cube ultra léger, insensible à la masse et au drag |
+| `Prefabs/GrabMiniCube.prefab` | mini cube ultra léger (10 cm) |
 | `Materials/GrabMiniCube.mat` | matériau du mini cube (URP Lit, orange émissif) |
-| `Prefabs/GrabHeavyCube.prefab` | cube lourd (25 kg), lent à suivre et difficile à lancer |
+| `Prefabs/GrabHeavyCube.prefab` | cube lourd (25 kg), tenue physique |
 | `Materials/GrabHeavyCube.mat` | matériau du cube lourd (URP Lit, gris chaud) |
 
-## Ce que contient `GrabCube.prefab`
+## La logique de `GrabbableBase`
 
-- `MeshFilter` et `MeshRenderer` du cube primitif, matériau `GrabCube`.
-- `BoxCollider` natif, sur le layer `Grabbable` (7).
-- `Rigidbody` : masse 1, gravité active, interpolation `Interpolate`.
-- `GrabbableBase` :
-  - `body` = le `Rigidbody` du cube
-  - `grabColliders` = le `BoxCollider`
-  - `highlightMaterial` = `GrabCubeHighlight`
-  - `enabled` = true (le composant fait office de flag), `allowed` = `All`, `singleGrabberOnly` = false
-  - `mode` = `Free` (l'objet garde la pose qu'il avait au grab)
-  - `poseType` = `Freeform`
-- suivi dans `LateUpdate` (via `HoldFollower`, ordre d'exécution 10000, donc après tous les grabbers) : le corps est rendu kinématique pendant la prise, `transform` est écrit une seule fois par frame avec lissage `hold.followSpeed` / `hold.turnSpeed` et un blend de `duration` au moment du grab
-- `limits.drag` = 1.5, `limits.mass` = 0.1
+Deux modes, comme `Grabbable` d'AutoHand :
 
-## Ce que contient `GrabMiniCube.prefab`
+- **`ignoreWeight` = true** (tenue sans poids) : au grab le corps devient cinématique et `HoldFollower` écrit
+  `transform` dans `LateUpdate`, après le placement de tous les `GrabPoint`. Un seul écrivain par frame, donc
+  pas de tremblement. L'objet suit son point de prise à `followSpeed` m/s, en gardant l'offset et la rotation
+  qu'il avait au grab.
+- **`ignoreWeight` = false** (tenue physique) : le corps reste dynamique, le grabber lui pose un
+  `ConfigurableJoint` (voir `jointBreakForce`), et la main est retenue par l'objet. C'est le poids réel.
 
-Cube de 10 cm (scale 0.1), pensé pour un objet qu'on ne veut ni ralenti ni alourdi.
+Réglages :
 
-- `BoxCollider` natif, layer `Grabbable` (7).
-- `Rigidbody` : masse 0.05, `linearDamping` 0, `angularDamping` 0.02, `Interpolate`, `ContinuousDynamic` (petit et rapide, il doit être détecté contre les parois fines).
-- `GrabbableBase` :
-  - `limits.drag` = 0 et `limits.mass` = 0 : aucune masse minimale imposée pendant la prise, aucun drag ajouté
-  - `hold.followSpeed` = 30, `hold.turnSpeed` = 1440 (le suivi colle à la main sans traîner)
-  - `hold.snap` = `Position` : au grab, l'objet est téléporté sur le `GrabPoint` mais garde son orientation (`Rotation` et `Both` sont aussi disponibles, `None` garde l'offset et le blend)
-  - `hold.atHoldDistance` = true : l'objet est ramené à sa propre `hold.distance` au moment du grab (si `hold.distance` = 0, c'est le `min` du grabber qui sert de base)
-  - `hold.distance` = 1.2 : distance de maintien demandée par l'objet, ignorée si `hold.atHoldDistance` est false
-  - `hold.fixedDistance` = false : la molette peut l'éloigner / le rapprocher (le mettre à true fige la distance)
-  - `release.multiplier` = 0.5 et `release.motion.maxSpeed` = 6 : lancer court, l'objet ne part plus à 30 m/s
-  - `grabType` = `GrabbableToHand` : l'objet vole vers la main, la main ne bouge pas. Les doigts sont posés **à l'arrivée**, quand l'objet a fini son blend sur le grab point (en `HandToGrabbable` c'est la main qui va chercher l'objet)
-  - `mode` = `Free`, `allowed` = `All`
+| Réglage | Rôle |
+|---|---|
+| `body` | `Rigidbody` du cube (rempli au `Reset`) |
+| `grabColliders` | colliders attrapables (remplis au `Reset` et dans `Awake`) |
+| `allowed` | rigs autorisés (mains, tête, pieds, corps) |
+| `grabType` | `Default`, `HandToGrabbable` (la main va chercher l'objet) ou `GrabbableToHand` (l'objet vole vers la main) |
+| `poseType` | `Grab` ou `Pinch` (pose des doigts) |
+| `instantGrab` | attache immédiate, sans blend |
+| `singleGrabberOnly` | un seul grabber peut le tenir |
+| `ignoreWeight` | tenue cinématique (true) ou tenue physique par joint (false) |
+| `heldNoFriction` | remplace le matériau physique des colliders pendant la tenue |
+| `followSpeed` | vitesse maximale de suivi du point de prise (m/s, ignorée en tenue physique) |
+| `minHeldDrag` / `minHeldAngleDrag` / `minHeldMass` | planchers appliqués au corps pendant une tenue physique |
+| `throwPower` | multiplicateur du lancer mesuré au point de prise |
+| `jointBreakForce` | force de rupture du joint d'une tenue physique (N) |
+| `tearable` | l'objet tenu peut être arraché de ce qui le retient (joint sur l'objet) |
+| `tearDistance` | distance de traction avant arrachement (m) |
+| `motion` | échantillonnage de la vitesse au point de prise (fenêtre, grâce, vitesse max) |
 
-La tenue est purement cinématique (`hold.dynamic` = false) : ni la masse, ni le drag, ni la gravité n'agissent pendant la prise. La masse et le drag ne redeviennent actifs qu'au relâchement, où la vélocité du `Motion` est appliquée.
+Le lancer ne dépend pas du grabber : `Motion` échantillonne le point de prise pendant la tenue, et
+`TryRemoveGrabber` applique `vitesse × multiplicateur de release × throwPower` au corps au relâchement.
 
-## Ce que contient `GrabHeavyCube.prefab`
+### Plusieurs grabbers sur le même objet
 
-Cube de 60 cm, la version « lourde » de `GrabCube`. Reprise de l'exemple `Barrel` d'AutoHand (`Examples/Prefabs/Kitchen/Barrel.prefab` : masse 100, `parentOnGrab` = false, `ignoreWeight` = false, `jointBreakForce` = 10000), traduite dans les réglages de `GrabbableBase` :
+Avec `singleGrabberOnly` à false (les trois cubes), un objet déjà tenu peut être pris par un autre grabber :
+une seconde main, un rayon, le desktop. La règle est la même pour tous (`SharedHold` = plus d'un grabber) :
+aucun grabber n'en domine un autre.
 
-- `Rigidbody` : masse **25**, `linearDamping` 1.5, `angularDamping` 2, `Interpolate`, détection de collision continue. Il ne flotte pas et ne rebondit pas.
-- `GrabbableBase` :
-  - `hold.physicsMass` = **5** : au-dessus de 5 kg la tenue est **physique**. L'objet reste un corps dynamique, `HoldFollower` est coupé et `GrabJointBinder` pose un `ConfigurableJoint` rigide entre la main et le cube. C'est le poids réel : la main est retenue par le cube, elle ne le suit plus au tracker, et au-delà de `HandGrabber.physicalReleaseDistance` (0.5 m) la main lâche
-  - `hold.followSpeed` = **3** : en tenue physique, c'est la vitesse maximale de la main pendant la prise
-  - `hold.referenceMass` = **1** : ne sert qu'en repli (si un grabber ne sait pas porter de joint) : la vitesse effective vaut `followSpeed × sqrt(referenceMass / masse)`
-  - `grabType` = `Default` : c'est la main qui décide. La masse (25 kg) dépasse `maxReachMass` (2 kg) de `HandGrabber`, donc la main ne tire pas l'objet vers elle, c'est l'objet qui vient (même logique que `HandToGrabbable` refusé pour un objet lourd chez AutoHand)
-  - `release.multiplier` = **0.3** et `release.motion.maxSpeed` = **2** : un lancer court, l'objet ne part pas à 6 m/s
-  - `singleGrabberOnly` = false : les deux mains peuvent le porter
-- `limits.drag` = 1.5 et `limits.mass` = 0.1 : planchers appliqués pendant la prise. `limits.mass` est un **minimum**, pas un maximum : la masse de 25 kg du `Rigidbody` n'est jamais réduite
+- **Position** : `TryGetHoldPose` **moyenne** la pose demandée par chaque grabber → l'objet est tiré
+  **entre** eux (milieu des poses **trackées** des mains / des points de prise des rayons), sans plafond de
+  vitesse (`followSpeed` est ignoré). Chacun tire donc à parts égales.
+- **Rotation** : celle du **premier grabber `Direct`** (sinon du premier), c'est-à-dire
+  `rotation trackée * offset de prise` — une orientation **continue**. Surtout pas l'axe main↔main : il
+  s'inverse quand les mains se croisent ou se tirent l'une vers l'autre, l'objet fait un demi-tour et les
+  deux mains se retrouvent à la place de l'autre.
+- **Mains** : elles ne sont **jamais déplacées**. Chacune reste sur son contrôleur et c'est l'objet qui vient
+  entre elles : une main tirée vers l'objet (verrou de pose) se figeait à 50 cm de la main réelle et l'ensemble
+  ne suivait plus le joueur. La pose demandée par une main est donc sa pose **trackée**
+  (`IGrabberPose.TryGetTrackedPose`), pas la pose de son point de prise.
 
-Repères : `GrabCube` (1 kg) glisse dans la main ; `GrabHeavyCube` (25 kg, tenue physique) est lourd : on le porte lentement, il bute contre le décor, et la main reste accrochée au cube plutôt que de suivre le tracker ; `GrabMiniCube` (0.05 kg, followSpeed 30) colle à la main.
+Chaque grabber se lâche **séparément** (`TryRemoveGrabber`) : l'objet reste tenu par les autres, et si c'est le
+porteur qui lâche, le suivant reprend la tenue sur la pose courante (`RebaseOffset`), sans saut.
+
+## Écraser et arracher (comme AutoHand)
+
+Deux contrats du SDK, implémentés par `GrabbableBase` et alimentés par les grabbers :
+
+| Interface | AutoHand | Ce que ça fait ici |
+|---|---|---|
+| `IGrabSqueeze` | `onSqueeze` / `OnSqueeze(hand)` | `Squeeze(grabber)` / `Unsqueeze(grabber)` → événements `onSqueezed` / `onUnsqueezed` (UnityEvents `(grabbable, grabber)`) |
+| `IGrabTear` | joint qui casse (`OnJointBreak`) | `CanTear`, `TryTear(grabber)` → détruit les `Joint` qui retiennent l'objet et lève `onTorn` ; l'objet **reste tenu** |
+
+- L'écrasement est lu sur l'axe de **grip** de la main (`finger.left.middle` / `finger.right.middle`) :
+  au-dessus de `squeezeThreshold` (0.8) → `Squeeze`, en dessous de `squeezeRelease` (0.6) → `Unsqueeze`.
+  Vaut pour une tenue à la main **ou** au rayon. Le grabbable décide de ce qu'écraser veut dire (shape key,
+  son, casse).
+- L'arrachement est automatique : un objet qui porte un `Joint` (porte, levier, tiroir) se détache quand on
+  l'éloigne de `tearDistance` (0.2 m) de l'endroit où il a été saisi, et il reste dans la main. `tearable`
+  coupe le comportement, `TryTear` permet de le déclencher par script.
+
+## Les trois cubes
+
+`GrabCube` (1 kg) : `ignoreWeight` = true, `followSpeed` = 10, `throwPower` = 1, `grabType` = `HandToGrabbable`.
+Il glisse dans la main et se lance normalement.
+
+`GrabMiniCube` (10 cm, masse 0.05) : `followSpeed` = 30 (colle à la main), `throwPower` = 0.5 et
+`motion.maxSpeed` = 6 (lancer court), `grabType` = `GrabbableToHand` (l'objet vole vers la main),
+aucun plancher de drag ou de masse.
+
+`GrabHeavyCube` (60 cm, 25 kg) : `ignoreWeight` = false, donc tenue physique. `followSpeed` = 3 (vitesse max de
+la main pendant la prise), `minHeldDrag` = 1.5 et `minHeldAngleDrag` = 2, `jointBreakForce` = 10000 N,
+`throwPower` = 0.3 et `motion.maxSpeed` = 2 (lancer court). La main ne peut pas le tirer (`maxReachMass` de
+`HandGrabber` = 2 kg), c'est donc l'objet qui vient, comme chez AutoHand.
 
 ## Tester en quelques étapes
 
 1. Dans la scène, créer un GameObject `Hand` avec un enfant `GrabPoint` placé à environ 10 cm devant.
-2. Ajouter `GrabberBase` sur `Hand`, glisser `GrabPoint` dans le champ `grabPoint`. Laisser `targetLayers` vide : il est forcé sur `Grabbable` dans `Awake`.
+2. Ajouter `GrabberBase` sur `Hand`, glisser `GrabPoint` dans le champ `grabPoint`. Laisser `targetLayers` vide :
+   il est forcé sur `Grabbable` dans `Awake`.
 3. Déposer `GrabCube.prefab` devant la main.
 4. Depuis l'inspecteur ou un script :
    - `grabber.TryFindTarget(out var target, out var hit)` puis `grabber.TryGrab(target, hit, 0.1f)`
-   - ou `grabber.SetTarget(target, hit)` puis `grabber.TryGrabTarget(0.1f)`
-   - relâcher : `grabber.TryReleaseHeld(1f)` : la vitesse de lancer sort du `Motion` du grabbable, avec une fenêtre de grâce si la main vient de s'arrêter
+   - relâcher : `grabber.TryReleaseHeld(1f)`
 
-Le grab est aussi observable via `OnGrabbedEvent`, `OnReleasedEvent` et `OnTargetChangedEvent` (UnityEvents exposés par `GrabberBase`), et via `OnGrabbedEvent` / `OnReleasedEvent` / `OnHighlightChangedEvent` sur `GrabbableBase`.
-
-## Variantes rapides
-
-| Objectif | Réglage |
-|---|---|
-| Objet qui se colle à une prise fixe | `mode` = `Snap` et renseigner `grabAnchor` (transform enfant à l'endroit de la prise) |
-| Objet qui reste droit (plateau) | `mode` = `FixedRotation` |
-| Objet qui tourne sur place (molette) | `mode` = `FixedPosition` |
-| Objet lourd et lent | `hold.referenceMass` = 1 sur un `Rigidbody` de 25 kg (`limits.mass` ne sert qu'à imposer un minimum) | || Objet léger qui suit la main au millimètre | `limits.drag` = 0, `limits.mass` = 0, `hold.followSpeed` = 30 |
-| Objet qui se téléporte sur la prise au grab | `hold.snap` = `Position` (ou `Both` pour aligner aussi la rotation) |
-| Objet ramené devant la caméra au grab | `hold.atHoldDistance` = true + `hold.distance` (0 = `min` du grabber) |
-| Objet qu'on ne peut pas éloigner à la molette | `hold.fixedDistance` = true |
-| Lancer plus court | baisser `release.multiplier`, et `release.motion.maxSpeed` avec lui |
-| Objet lié physiquement (poignée de porte) | attacher un `ConfigurableJoint` via `GrabJointBinder.Bind(grabber, grabbable, worldAnchor)` |
-
-## Rigidbody et suivi
-
-Un objet tenu est rendu **kinématique** par défaut (`hold.dynamic` = false) : `HoldFollower` écrit `transform` dans `LateUpdate`, après le placement de tous les `GrabPoint`. Un seul écrivain par frame, donc pas de tremblement entre la position physique et la position du point de prise.
-
-`hold.dynamic` = true laisse le `Rigidbody` **non cinématique** pendant la tenue : il pousse et bloque les autres corps, et le décor le repousse. Le suivi reste une écriture de `transform`, donc aucun effort n'est transmis à la main : le poids ne se ressent que par `hold.referenceMass` (voir `GrabHeavyCube`). Garder `Interpolate` et une détection de collision continue dans ce cas.
-
-Le poids, lui, ne dépend pas de `dynamic`. Deux modes : `hold.referenceMass` ralentit le suivi cinématique (l'objet traîne mais reste téléporté), et `hold.physicsMass` passe la tenue en **physique** (corps dynamique + joint rigide + main retenue), pour les objets réellement lourds. `limits.mass` est un plancher de masse pendant la tenue, jamais un plafond.
+Le grab est aussi observable via `OnGrabbedEvent`, `OnReleasedEvent` et `OnTargetChangedEvent` (UnityEvents de
+`GrabberBase`), et via `OnGrabbedEvent` / `OnReleasedEvent` / `OnHighlightChangedEvent` sur `GrabbableBase`.
 
 ## Note sur le nom du dossier
 
-Le dossier s'appelle `~Examples` (tilde en préfixe). Unity n'ignore que les dossiers qui **terminent** par `~` : ceux-ci sont bien importés et visibles.
+Le dossier s'appelle `~Examples` (tilde en préfixe). Unity n'ignore que les dossiers qui **terminent** par `~` :
+ceux-ci sont bien importés et visibles.

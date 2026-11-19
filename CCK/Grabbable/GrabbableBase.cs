@@ -7,22 +7,24 @@ namespace Nox.CCK.Interactions {
 	[DefaultExecutionOrder(-100)]
 	[RequireComponent(typeof(Rigidbody))]
 	public partial class GrabbableBase : MonoBehaviour, IGrabbable, IGrabGroup, IGrabBody, IGrabColliders,
-		IGrabAccess, IGrabAttachment, IGrabHold, IGrabThrow, IGrabHighlight, IGrabPoseProvider, IGrabApproach {
+		IGrabAccess, IGrabAttachment, IGrabThrow, IGrabHighlight, IGrabSqueeze, IGrabTear, IGrabVelocity, IGrabPriority {
+		[Header("Grab")]
 		[SerializeField] private Rigidbody body;
-		[SerializeField] private Transform grabAnchor;
-		[SerializeField] private Material highlightMaterial;
-		[SerializeField] private GrabbablePose grabPose;
 		[SerializeField] private List<Collider> grabColliders = new();
+		[SerializeField] private Material highlightMaterial;
+		[SerializeField] private GrabbableSettings grab = GrabbableSettings.Default;
 
-		[SerializeField] private EntityRig allowed = EntityRig.All;
-		[SerializeField] private GrabMode mode = GrabMode.Free;
-		[SerializeField] private GrabPoseType poseType = GrabPoseType.Freeform;
-		[SerializeField] private GrabType grabType = GrabType.Default;
-		[SerializeField] private bool instantGrab;
-		[SerializeField] private GrabRelease release = GrabRelease.Default;
-		[SerializeField] private GrabHold hold = GrabHold.Default;
-		[SerializeField] private GrabLimits limits = GrabLimits.Default;
-		[SerializeField] private bool singleGrabberOnly = false;
+		[Header("Held")]
+		[SerializeField] private HeldSettings held = HeldSettings.Default;
+
+		[Header("Release")]
+		[SerializeField] private ReleaseSettings release = ReleaseSettings.Default;
+		[SerializeField]
+		private Motion motion = new();
+
+		[Header("Tear")]
+		[SerializeField]
+		private TearSettings tear = TearSettings.Default;
 
 		private readonly List<IGrabber> grabbers = new();
 
@@ -36,73 +38,121 @@ namespace Nox.CCK.Interactions {
 
 		public GrabState State => state;
 
-		public bool IsPhysicsHold
-			=> hold.physicsMass > 0f && body != null && cachedMass >= hold.physicsMass;
-
-		public bool PhysicsHeld
-			=> physicsHeld;
-
 		public int HeldCount => grabbers.Count;
-
-		public IReadOnlyList<Collider> GrabColliders => grabColliders;
 
 		public IReadOnlyList<IGrabber> Grabbers => grabbers;
 
-		public Transform GrabAnchor => grabAnchor != null ? grabAnchor : transform;
+		/// <summary>
+		/// Grabber that carries the object: the first one to take it. Its joint is the one a physical hold binds, so the
+		/// object is never pulled by two rigid constraints at once.
+		/// </summary>
+		public IGrabber Driver
+			=> grabbers.Count > 0
+				? grabbers[0]
+				: null;
 
-		public GrabbablePose PoseAsset {
-			get => grabPose;
-			set => grabPose = value;
+		/// <summary>Whether this object is carried by a joint, so a grabber has to bind one to hold it.</summary>
+		public bool HasPhysicsDriver
+			=> physicsHeld && grabbers.Count > 0;
+
+		/// <summary>
+		/// Whether <paramref name="grabber"/> is the one carrying a physical hold, i.e. the one that binds the joint. Every
+		/// other grabber assists: it holds the same object without a second joint, which would fight the first.
+		/// </summary>
+		public bool IsDriver(IGrabber grabber)
+			=> physicsHeld
+			   && grabber != null
+			   && grabbers.Count > 0
+			   && ReferenceEquals(Driver, grabber);
+
+		public IReadOnlyList<Collider> GrabColliders => grabColliders;
+
+		public GrabbableSettings GrabConfig {
+			get => grab;
+			set => grab = value;
 		}
 
-		public EntityRig Allowed {
-			get => allowed;
-			set => allowed = value;
+		public HeldSettings HeldConfig {
+			get => held;
+			set => held = value.Sanitized();
 		}
 
-		public GrabMode Mode {
-			get => mode;
-			set => mode = value;
-		}
-
-		public GrabPoseType PoseType {
-			get => poseType;
-			set => poseType = value;
-		}
-
-		public GrabType GrabType {
-			get => grabType;
-			set => grabType = value;
-		}
-
-		public bool InstantGrab {
-			get => instantGrab;
-			set => instantGrab = value;
-		}
-
-		public float ThrowMultiplier {
-			get => release.multiplier;
-			set => release.multiplier = value;
-		}
-
-		public GrabHold Hold {
-			get => hold;
-			set => hold = value;
-		}
-
-		public GrabRelease Release {
+		public ReleaseSettings ReleaseConfig {
 			get => release;
 			set => release = value;
 		}
 
-		public GrabLimits Limits {
-			get => limits;
-			set => limits = value;
+		public TearSettings TearConfig {
+			get => tear;
+			set => tear = value;
+		}
+
+		public bool IsGrabbable {
+			get => grab.isGrabbable;
+			set => grab.isGrabbable = value;
+		}
+
+		public EntityRig Allowed {
+			get => grab.allowed;
+			set => grab.allowed = value;
+		}
+
+		public GrabType GrabType {
+			get => grab.type;
+			set => grab.type = value;
+		}
+
+		public GrabPoseType PoseType {
+			get => grab.pose;
+			set => grab.pose = value;
+		}
+
+		public bool InstantGrab {
+			get => grab.instant;
+			set => grab.instant = value;
 		}
 
 		public bool SingleGrabberOnly {
-			get => singleGrabberOnly;
-			set => singleGrabberOnly = value;
+			get => grab.single;
+			set => grab.single = value;
+		}
+
+		public bool AllowGrabberSwap {
+			get => grab.allowSwap;
+			set => grab.allowSwap = value;
+		}
+
+		public float PriorityWeight {
+			get => grab.priority;
+			set => grab.priority = value;
+		}
+
+		public bool RequireFreeBody {
+			get => grab.requireFree;
+			set => grab.requireFree = value;
+		}
+
+		public bool IgnoreWeight => held.ignoreWeight;
+
+		public float FollowSpeed => held.followSpeed;
+
+		public float MaxHeldVelocity => held.followSpeed;
+
+		public float HeldMassDivider {
+			get => held.massDivider;
+			set => held.massDivider = Mathf.Max(1f, value);
+		}
+
+		public float JointBreakForce => release.jointBreakForce;
+
+		public float ThrowPower {
+			get => release.throwPower;
+			set => release.throwPower = value;
+		}
+
+		public Motion Motion {
+			get => motion;
+			set => motion = value != null ? value : new Motion();
 		}
 
 		protected virtual void Reset() {
@@ -119,7 +169,10 @@ namespace Nox.CCK.Interactions {
 				body = GetComponent<Rigidbody>();
 			if (grabColliders.Count == 0)
 				CollectColliders(true);
-			CacheBody();
+
+			motion ??= new Motion();
+			solve = solve.Sanitized();
+			held = held.Sanitized();
 
 			follower = gameObject.GetOrAddComponent<HoldFollower>();
 			follower.Target = this;
@@ -147,19 +200,35 @@ namespace Nox.CCK.Interactions {
 		}
 
 		public bool CanBeGrabbedBy(IGrabber grabber) {
-			if (!enabled || grabber == null) return false;
-			if (state == GrabState.Pending || state == GrabState.Releasing) return false;
-			if (singleGrabberOnly && grabbers.Count > 0 && !grabbers.Contains(grabber)) return false;
-			if (grabber.Rig == EntityRig.None) return true;
+			if (!enabled || !grab.isGrabbable || grabber == null)
+				return false;
+			if (state == GrabState.Pending || state == GrabState.Releasing)
+				return false;
+			if (grabbers.Contains(grabber))
+				return false;
+			if (grab.single && grabbers.Count > 0 && !grab.allowSwap)
+				return false;
 
-			return (allowed & grabber.Rig) != 0;
+			// a body the physics owns (kinematic, constrained) is not taken: the hold would fight the constraints
+			if (grab.requireFree && body != null && (body.isKinematic || body.constraints != RigidbodyConstraints.None))
+				return false;
+
+			if (grabber.Rig == EntityRig.None)
+				return true;
+
+			// one grabber per rig: the ray of a hand cannot take what the hand itself already holds (and the other way
+			// around), while the other hand still can
+			if (IsHeldByRig(grabber.Rig))
+				return false;
+
+			return (grab.allowed & grabber.Rig) != 0;
 		}
 
-		public bool TryGetPose(EntityRig rig, out Vector3 position, out Quaternion rotation) {
-			if (grabPose != null) return grabPose.TryGetPose(rig, out position, out rotation);
+		private bool IsHeldByRig(EntityRig rig) {
+			for (var i = 0; i < grabbers.Count; i++)
+				if (grabbers[i] != null && grabbers[i].Rig == rig)
+					return true;
 
-			position = Vector3.zero;
-			rotation = Quaternion.identity;
 			return false;
 		}
 	}

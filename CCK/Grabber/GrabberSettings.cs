@@ -6,6 +6,7 @@ namespace Nox.CCK.Interactions {
 	[Serializable]
 	public struct GrabRay {
 		public LayerMask layers;
+		public LayerMask ignoreLayers;
 		public float reach;
 		public float offset;
 

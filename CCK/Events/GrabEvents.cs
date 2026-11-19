@@ -25,6 +25,9 @@ namespace Nox.CCK.Interactions {
 	public class GrabbableHighlightEvent : UnityEvent<GrabbableBase, GrabberBase, bool> { }
 
 	[Serializable]
+	public class GrabbableSqueezeEvent : UnityEvent<GrabbableBase, GrabberBase> { }
+
+	[Serializable]
 	public class CursorTargetEvent : UnityEvent<CursorBase, InteractTarget> { }
 
 	[Serializable]

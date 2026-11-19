@@ -4,12 +4,13 @@ using UnityEngine;
 namespace Nox.CCK.Interactions {
 	public partial class GrabberBase {
 		public bool TryGrab(IGrabbable grabbable, in RaycastHit contact, float duration) {
-			if (grabbable == null || held != null) return false;
-			if (!grabbable.CanBeGrabbedBy(this)) return false;
+			if (!CanGrab(grabbable))
+				return false;
 
 			ClearTarget(grabbable);
 
-			if (!grabbable.TryAddGrabber(this, contact, duration)) return false;
+			if (!grabbable.TryAddGrabber(this, contact, duration))
+				return false;
 
 			held = grabbable;
 			state = GrabState.Held;
@@ -24,8 +25,10 @@ namespace Nox.CCK.Interactions {
 		}
 
 		public bool TryRelease(IGrabbable grabbable, float throwMultiplier) {
-			if (grabbable == null || held != grabbable) return false;
-			if (!grabbable.TryRemoveGrabber(this, throwMultiplier)) return false;
+			if (grabbable == null || held != grabbable)
+				return false;
+			if (!grabbable.TryRemoveGrabber(this, throwMultiplier))
+				return false;
 
 			held = null;
 			state = GrabState.Free;
@@ -35,7 +38,8 @@ namespace Nox.CCK.Interactions {
 		}
 
 		public bool TryRelease(IGrabbable grabbable, float throwMultiplier, Vector3 linear, Vector3 angular) {
-			if (!TryRelease(grabbable, throwMultiplier)) return false;
+			if (!TryRelease(grabbable, throwMultiplier))
+				return false;
 
 			if (grabbable is IGrabThrow thrower)
 				thrower.ApplyThrow(linear, angular, throwMultiplier);

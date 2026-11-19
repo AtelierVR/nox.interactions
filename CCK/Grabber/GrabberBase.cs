@@ -54,6 +54,11 @@ namespace Nox.CCK.Interactions {
 			set => ray.layers = value;
 		}
 
+		public LayerMask IgnoreLayers {
+			get => ray.ignoreLayers;
+			set => ray.ignoreLayers = value;
+		}
+
 		public bool HighlightTargets {
 			get => highlight.enabled;
 			set => highlight.enabled = value;
@@ -62,6 +67,13 @@ namespace Nox.CCK.Interactions {
 		public Material HighlightMaterial {
 			get => highlight.material;
 			set => highlight.material = value;
+		}
+
+		public virtual bool CanGrab(IGrabbable grabbable) {
+			if (grabbable == null || held != null || state != GrabState.Free)
+				return false;
+
+			return grabbable.CanBeGrabbedBy(this);
 		}
 
 		protected virtual void Awake() {

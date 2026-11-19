@@ -22,25 +22,10 @@ namespace Nox.Interactions {
 		Releasing = 3
 	}
 
-	public enum GrabMode {
-		Free = 0,
-		Snap = 1,
-		FixedRotation = 2,
-		FixedPosition = 3
-	}
-
+	/// <summary>Hand pose an object is held with, following AutoHand.</summary>
 	public enum GrabPoseType {
-		Freeform = 0,
-		Pinch = 1,
-		Custom = 2
-	}
-
-	[Flags]
-	public enum GrabSnap {
-		None = 0,
-		Position = 1 << 0,
-		Rotation = 1 << 1,
-		Both = Position | Rotation
+		Grab = 0,
+		Pinch = 1
 	}
 
 	public enum GrabSource {
@@ -51,10 +36,8 @@ namespace Nox.Interactions {
 	}
 
 	/// <summary>
-	/// How a grabber reaches its object. A <see cref="Direct"/> grabber holds it with a body (a hand, a
-	/// grabbed prop), so the object is blended to it and stays where it was caught. An <see cref="Indirect"/>
-	/// grabber points at it (ray, near/far, desktop), so the object's own hold hints (snap, hold distance)
-	/// are honoured.
+	/// How a grabber reaches its object. A <see cref="Direct"/> grabber holds it with a body (a hand, a grabbed
+	/// prop), an <see cref="Indirect"/> grabber points at it (ray, near/far, desktop).
 	/// </summary>
 	public enum GrabKind {
 		Direct = 0,
@@ -62,21 +45,18 @@ namespace Nox.Interactions {
 	}
 
 	/// <summary>
-	/// How a direct grab brings the object into the hand, following AutoHand: either the object flies to
-	/// the hand, or the hand reaches the object and comes back to its follow position with it.
+	/// How a direct grab brings the object into the hand, following AutoHand: either the object flies to the hand,
+	/// or the hand reaches the object and comes back to its follow position with it.
 	/// </summary>
 	public enum GrabType {
-		/// <summary>No preference: the grabber's own type is used.</summary>
+		/// <summary>No preference: the grabber decides.</summary>
 		Default = 0,
 
-		/// <summary>Attach immediately, no animation.</summary>
-		InstantGrab = 1,
-
 		/// <summary>The hand reaches the object, grabs it, then returns to its follow position with it.</summary>
-		HandToGrabbable = 2,
+		HandToGrabbable = 1,
 
 		/// <summary>The object flies from where it is to the hand.</summary>
-		GrabbableToHand = 3
+		GrabbableToHand = 2
 	}
 
 	public enum PointerMode {
