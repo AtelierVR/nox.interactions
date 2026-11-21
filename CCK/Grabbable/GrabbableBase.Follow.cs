@@ -466,10 +466,10 @@ namespace Nox.CCK.Interactions {
 			EndHold();
 		}
 
-		private void CaptureOffset(IGrabber grabber, in RaycastHit contact) {
-			if (CentersOnGrabPoint(grabber) && contact.collider) {
-				var holding = HoldingPointOf(grabber, contact.point);
-				var position = RestAgainstPalm(grabber, holding + (transform.position - contact.point));
+		private void CaptureOffset(IGrabber grabber, Vector3 contactPoint, Collider surface) {
+			if (CentersOnGrabPoint(grabber) && surface) {
+				var holding = HoldingPointOf(grabber, contactPoint);
+				var position = RestAgainstPalm(grabber, holding + (transform.position - contactPoint));
 
 				SetHold(grabber, position, transform.rotation, TracksFrame);
 				return;

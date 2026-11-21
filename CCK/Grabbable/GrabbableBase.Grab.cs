@@ -4,7 +4,13 @@ using UnityEngine;
 
 namespace Nox.CCK.Interactions {
 	public partial class GrabbableBase {
-		public bool TryAddGrabber(IGrabber grabber, in RaycastHit contact, float duration) {
+		public bool TryAddGrabber(IGrabber grabber, in RaycastHit contact, float duration)
+			=> AddGrabber(grabber, contact.point, contact.collider, duration);
+
+		public bool TryAddGrabberAt(IGrabber grabber, Vector3 point, float duration)
+			=> AddGrabber(grabber, point, null, duration);
+
+		private bool AddGrabber(IGrabber grabber, Vector3 point, Collider surface, float duration) {
 			// a grabber destroyed while it held the object never released it: drop it before deciding this is a first grab
 			PruneGrabbers();
 
@@ -25,7 +31,7 @@ namespace Nox.CCK.Interactions {
 			WatchBody(grabber);
 
 			if (grabbers.Count == 1) {
-				CaptureOffset(grabber, contact);
+				CaptureOffset(grabber, point, surface);
 				BeginHold(grab.instant ? 0f : duration, grabber);
 				tearFrom = transform.position;
 			}
