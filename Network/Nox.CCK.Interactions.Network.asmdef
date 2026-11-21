@@ -1,0 +1,26 @@
+{
+    "name": "Nox.CCK.Interactions.Network",
+    "rootNamespace": "",
+    "references": [
+        "Nox.Interactions",
+        "Nox.CCK.Interactions",
+        "Nox.Sessions",
+        "Nox.CCK.Sessions",
+        "Nox.Entities",
+        "Nox.CCK.Entities",
+        "Nox.Players",
+        "Nox.CCK",
+        "Nox.ModLoader",
+        "Nox.CCK.Worlds",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

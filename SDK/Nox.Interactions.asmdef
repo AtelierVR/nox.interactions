@@ -1,7 +1,9 @@
 {
     "name": "Nox.Interactions",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "Nox.Entities"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
